@@ -74,6 +74,38 @@
           </table>
         </div>
       </div>
+
+      <div class="card" v-if="submittedOrders.length" style="margin-top: 1.5rem;">
+        <div class="card-header">
+          <h3 class="card-title">{{ t('orders.submittedOrders') }} ({{ submittedOrders.length }})</h3>
+        </div>
+        <div class="table-container">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>{{ t('orders.table.orderNumber') }}</th>
+                <th>{{ t('orders.table.date') }}</th>
+                <th>{{ t('orders.table.items') }}</th>
+                <th>{{ t('orders.table.totalValue') }}</th>
+                <th>{{ t('orders.table.status') }}</th>
+                <th>{{ t('orders.table.leadTime') }}</th>
+                <th>{{ t('orders.table.expectedDelivery') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in submittedOrders" :key="order.id">
+                <td><strong>{{ order.order_number }}</strong></td>
+                <td>{{ formatDate(order.order_date) }}</td>
+                <td>{{ t('orders.itemsCount', { count: order.items.length }) }}</td>
+                <td><strong>{{ currencySymbol }}{{ order.total_value.toLocaleString() }}</strong></td>
+                <td><span class="badge warning">{{ t('status.submitted') }}</span></td>
+                <td>{{ order.lead_time_days }} {{ t('common.days') }}</td>
+                <td>{{ formatDate(order.expected_delivery) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -95,6 +127,7 @@ export default {
     const loading = ref(true)
     const error = ref(null)
     const orders = ref([])
+    const submittedOrders = ref([])
 
     // Use shared filters
     const {
@@ -117,6 +150,14 @@ export default {
           const dateB = new Date(b.order_date)
           return dateA - dateB
         })
+
+        // Restock orders are independent of the filter bar; a failure here
+        // must not break the main orders view.
+        try {
+          submittedOrders.value = await api.getRestockOrders()
+        } catch (e) {
+          submittedOrders.value = []
+        }
       } catch (err) {
         error.value = 'Failed to load orders: ' + err.message
       } finally {
@@ -160,6 +201,7 @@ export default {
       loading,
       error,
       orders,
+      submittedOrders,
       getOrdersByStatus,
       getOrderStatusClass,
       formatDate,
